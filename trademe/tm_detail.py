@@ -27,25 +27,23 @@ for link in links:
     soup = BeautifulSoup(page, 'html.parser')
 
     attributes = soup.find('table', attrs={'id','ListingAttributes'})
-    
     rows_list = attributes.find_all('tr')
 
-    attributes = {}
+    listing = {}
 
     description = soup.find('div', attrs={'class': 'ListingDescription'})
 
-    attributes['Description'] = description.text.encode('utf-8').strip()
-    attributes['Link'] = link
-
+    listing['Description'] = description.text.encode('utf-8').strip()
+    listing['Link'] = link
+    
     for row in rows_list:
     
         key = row.find('th')
         value = key.next_sibling.next_sibling.text.encode('utf-8').strip()
         key = key.text.encode('utf-8').strip()
-        attributes[key] = value
+        listing[key] = value
 
-    all_listings.append(attributes)
+    all_listings.append(listing)
         
 with open('tradeMeDetail.json', 'w') as outfile:
         json.dump(all_listings, outfile)
-        
