@@ -51,13 +51,13 @@ while stop == 0:
             for a in attributes:
                 key = a.find('img')
                 value = key.previous_sibling.previous_sibling.text.encode('utf-8').strip()
-                key = key.get('alt').encode('utf-8').title()
+                key = key.get('alt').encode('utf-8').lower()
                 listing[key] = value
             
-            listing['Title'] = title
-            listing['Subtitle'] = subtitle
-            listing['Price'] = price
-            listing['Link'] = link
+            listing['title'] = title
+            listing['subtitle'] = subtitle
+            listing['price'] = price
+            listing['link'] = link
 
             page_listings.append(listing)
         else:

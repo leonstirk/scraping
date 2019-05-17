@@ -4,6 +4,10 @@ overview <- fromJSON('tradeMeOverview.json')
 detail <- fromJSON('tradeMeDetail.json')
 names(detail) <- gsub(':','',names(detail))
 names(detail) <- gsub('#','',names(detail))
-data <- merge(overview, detail, by = 'Link')
+
+names(detail) <- gsub(' ','_',names(detail))
+names(overview) <- gsub(' ','_',names(overview))
+
+data <- merge(overview, detail, by = 'link')
 
 save(data, file='data.Rda')
