@@ -1,0 +1,97 @@
+rm(list=ls())
+
+## some functions
+
+numify <- function(x) {
+  return(as.numeric(gsub("[\\$%,]","",x)))
+}
+
+pvAnnuity <- function(C, r, t, m) {
+  pv_annuity <- ((C/m)/(r/m))*(1-(1/((1+(r/m))^(t*m))))
+  return(pv_annuity)
+}
+
+pvLumpSum <- function(FV, r, t, m) {
+  pv_lumpsum <- FV/((1+(r/m))^(t*m))
+  return(pv_lumpsum)
+}
+
+pvBond <- function(FV, C, r, t, m) {
+  pv_bond <- pvAnnuity(C, r, t, m) + pvLumpSum(FV, r, t, m)
+  return(pv_bond)
+}
+
+approx_bond_yield <- function(C, F, P, t, m) {
+  bond_yield <- ear(((((C/m)+((F-P)/(t*m)))/2)/((F+P)/2))*m,m)
+  return(bond_yield)
+}
+
+ear <- function(apr, m) {
+  ear <- ((1+(apr/m))^m)-1
+  return(ear)
+}
+
+## Load data from JSON fromat
+data <- fromJSON('debt_2019-02-27 11:02:00.json')
+
+## Reformat variable names
+names(data) <- gsub("[\\$\\(\\)]","",names(data))
+names(data) <- gsub(" ","_",names(data))
+
+## Convert all "-" to NA
+data[data == "-"] <- NA
+
+## reformat timestamp
+data$data_access_timestamp <- strptime(data$data_access_timestamp, '%Y-%m-%d %T')
+
+## Format date variables
+date_var_names <- c('maturity_date', 'previous_payment_date', 'next_record_date', 'maturity_date_*')
+data[date_var_names] <- lapply(data[date_var_names], function(x) { as.Date(x, '%d %b %Y') })
+
+## Seperate yield priced debt instruments and reformat to numeric
+data$yield <- NA
+data[grep("%", data$price),]$yield <- data[grep("%", data$price),]$price
+data$yield <- numify(data$yield)/100
+data$yield_priced_instrument <- sapply(data$yield, function(x) { if(is.na(x)) {return(0)} else {return(1)} })
+## data[which(data$yield_priced_instruments == 0),]$yield <- 
+
+## price_per_100
+data$price_per_100 <- numify(data$price_per_100)
+
+## coupon
+data$coupon <- numify(data$coupon)/100
+
+## outstanding
+data$outstanding_000s <- numify(data$outstanding_000s)*1000
+
+## frequency -> number of periods per annum (m)
+data$m <- as.numeric(mapvalues(data$frequency, from = c("Half Yearly", "Quarterly"), to = c("2", "4")))
+
+## price normalisation factor
+data$norm <- numify(data$face_value)/100
+
+## trades, volume, value
+data$trades <- as.numeric(data$trades)
+data$volume <- numify(data$volume)
+data$value <- numify(data$value)
+data$average_trade_volume <- NA
+data$average_trade_value <- NA
+data$average_trade_volume <- data$volume/data$trades
+data$average_trade_value <- data$value/data$trades
+
+## minimum holding
+data$minimum_holding <- numify(data$minimum_holding)
+
+## face value
+data$face_value <- numify(data$face_value)
+
+##trading status, instrument type
+data$trading_status <- as.factor(data$trading_status)
+data$type <- as.factor(data$type)
+
+## bid, ask, open, 52week high, 52week low
+
+
+
+
+## vanilla <- data[which(data$type == 'vanilla corporate bonds'),]
