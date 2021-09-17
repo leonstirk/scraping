@@ -1,0 +1,50 @@
+library(tidyverse)
+library(sf)
+library(httr)
+library(rvest)
+library(jsonlite)
+library(snakecase)
+
+retrieveREST <- function(url, feature, layer, id_var_name) {
+    url <- parse_url(url)
+    url$path <- paste(url$path, feature, 'FeatureServer', layer,'query', sep = '/')
+    url$query <- list(where = paste(id_var_name, " > 0", sep = ''),
+                      outFields = "*",
+                      returnGeometry = "true",
+                      f = "geojson")
+    request <- build_url(url)
+    return(st_read(request))
+}
+
+tmp <- retrieveREST('https://apps.dunedin.govt.nz/arcgis/rest/services/Public/',
+                    'Rates',
+                    '0',
+                    'OBJECTID')
+
+names(tmp) <- to_any_case(names(tmp), 'snake')
+ids <- sample(tmp$assessment_id, 20)
+rates_list <- list()
+for(i in 1:10) {
+    url <- paste0('https://www.dunedin.govt.nz/services/rates-information/rates?ratingID=',ids[i])
+    html <- read_html(url)
+    tb <- html_table(html)
+    tb <- tb[-1]
+
+    if(tb %>% length == 3){
+        a <- tb[[1]][-1,] %>% pull(2)
+        names(a) <- tb[[1]][-1,] %>% pull(1)
+        tb[[1]] <- a
+
+        a <- tb[[2]][-1,] %>% pull(2)
+        names(a) <- tb[[2]][-1,] %>% pull(1)
+        tb[[2]] <- a
+
+        names(tb[[3]]) <- to_any_case(names(tb[[3]]))
+        tb[[3]] <- tb[[3]] %>% pivot_wider(names_from = description, values_from = c(factor, amount, rate_or_charge)) %>% unlist
+    }
+    rates_list[[i]] <- unlist(tb)
+}
+
+rates_df <- bind_rows(rates_list)
+drop_cols <- names(which(unlist(lapply(rates_df, function(x) { any(str_detect(x, 'Total Charge')) }))))
+rates_df <- rates_df[,which(!names(rates_df) %in% drop_cols)]
